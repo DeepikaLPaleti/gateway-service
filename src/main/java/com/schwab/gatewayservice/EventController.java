@@ -33,8 +33,10 @@ public class EventController {
     @PostMapping
     public ResponseEntity<?> createEvent(@Valid @RequestBody EventRequest request) {
         // Idempotency check
-        if (eventRepository.existsById(request.eventId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Event with ID " + request.eventId() + " already exists.");
+        Optional<Event> existingEvent = eventRepository.findById(request.eventId());
+        if (existingEvent.isPresent()) {
+            // Return 200 OK or 409 Conflict depending on requirements. We return 200 to acknowledge idempotency.
+            return ResponseEntity.ok(existingEvent.get());
         }
 
         // Convert metadata to string
@@ -47,7 +49,7 @@ public class EventController {
             }
         }
 
-        // Create and save the event
+        // Create and save the event as PENDING
         Event event = new Event(
                 request.eventId(),
                 request.accountId(),
@@ -55,19 +57,22 @@ public class EventController {
                 request.amount(),
                 request.currency(),
                 request.eventTimestamp(),
-                metadataJson
+                metadataJson,
+                "PENDING"
         );
         eventRepository.save(event);
 
-        // Call Account Service
+        // Call Account Service synchronously
         try {
             restTemplate.postForEntity(accountServiceUrl + "/accounts/" + request.accountId() + "/transactions", request, Void.class);
+            // If successful, update status to COMPLETED
+            event.setStatus("COMPLETED");
+            eventRepository.save(event);
+            return ResponseEntity.status(HttpStatus.CREATED).body(event);
         } catch (Exception e) {
-            // Handle Account Service call failure
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error calling Account Service: " + e.getMessage());
+            // If Account Service is down, leave as PENDING and return 202 Accepted
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(event);
         }
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(event);
     }
 
     @GetMapping("/{id}")

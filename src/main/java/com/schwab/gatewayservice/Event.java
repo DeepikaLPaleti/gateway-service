@@ -22,10 +22,12 @@ public class Event {
     @Column(length = 2000)
     private String metadata;
 
+    private String status;
+
     public Event() {
     }
 
-    public Event(String eventId, String accountId, String type, BigDecimal amount, String currency, Instant eventTimestamp, String metadata) {
+    public Event(String eventId, String accountId, String type, BigDecimal amount, String currency, Instant eventTimestamp, String metadata, String status) {
         this.eventId = eventId;
         this.accountId = accountId;
         this.type = type;
@@ -33,6 +35,7 @@ public class Event {
         this.currency = currency;
         this.eventTimestamp = eventTimestamp;
         this.metadata = metadata;
+        this.status = status;
     }
 
     public String getEventId() {
@@ -89,5 +92,13 @@ public class Event {
 
     public void setMetadata(String metadata) {
         this.metadata = metadata;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }
