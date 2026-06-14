@@ -2,6 +2,8 @@ package com.schwab.gatewayservice;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Counter;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -20,14 +22,16 @@ public class EventController {
     private final EventRepository eventRepository;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final Counter eventsCreatedCounter;
 
     @Value("${account.service.url}")
     private String accountServiceUrl;
 
-    public EventController(EventRepository eventRepository, RestTemplate restTemplate, ObjectMapper objectMapper) {
+    public EventController(EventRepository eventRepository, RestTemplate restTemplate, ObjectMapper objectMapper, MeterRegistry meterRegistry) {
         this.eventRepository = eventRepository;
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.eventsCreatedCounter = meterRegistry.counter("events.created.total");
     }
 
     @PostMapping
@@ -68,6 +72,7 @@ public class EventController {
             // If successful, update status to COMPLETED
             event.setStatus("COMPLETED");
             eventRepository.save(event);
+            eventsCreatedCounter.increment();
             return ResponseEntity.status(HttpStatus.CREATED).body(event);
         } catch (Exception e) {
             // If Account Service is down, leave as PENDING and return 202 Accepted
