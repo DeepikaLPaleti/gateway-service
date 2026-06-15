@@ -5,5 +5,4 @@ import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, String> {
     List<Event> findByAccountIdOrderByEventTimestampDesc(String accountId);
-    List<Event> findByStatus(String status);
 }

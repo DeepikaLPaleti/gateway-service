@@ -68,8 +68,7 @@ public class EventController {
                 request.amount(),
                 request.currency(),
                 request.eventTimestamp(),
-                metadataJson,
-                "PROCESSING" // New status
+                metadataJson
         );
         eventRepository.save(event);
 
@@ -78,17 +77,12 @@ public class EventController {
             String url = accountServiceUrl + "/accounts/" + request.accountId() + "/transactions";
             restTemplate.postForEntity(url, request, Void.class);
 
-            // If successful, update status to COMPLETED
-            event.setStatus("COMPLETED");
-            eventRepository.save(event);
             eventsCreatedCounter.increment();
-            log.info("Successfully processed event {} and marked as COMPLETED.", request.eventId());
+            log.info("Successfully processed event {}.", request.eventId());
             return ResponseEntity.status(HttpStatus.CREATED).body(event);
         }, throwable -> {
             // Fallback: Executed when the circuit is open or the call fails
-            log.error("Account service is unavailable for event {}. Marking as FAILED.", request.eventId(), throwable);
-            event.setStatus("FAILED"); // New status
-            eventRepository.save(event);
+            log.error("Account service is unavailable for event {}.", request.eventId(), throwable);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Account service is currently unavailable.");
         });
     }
